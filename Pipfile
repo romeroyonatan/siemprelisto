@@ -12,6 +12,7 @@ sphinx = "*"
 pytest = "*"
 pytest-runner = "*"
 tox = "*"
+coverage = "*"
 
 
 [packages]

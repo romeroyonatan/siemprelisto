@@ -22,6 +22,7 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
+PIPENV := pipenv run
 
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
@@ -48,19 +49,18 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 
 lint: ## check style with flake8
-	flake8 siemprelisto tests
+	$(PIPENV) flake8 siemprelisto tests
 
 test: ## run tests quickly with the default Python
-	py.test
-	
+	$(PIPENV) py.test
 
 test-all: ## run tests on every Python version with tox
-	tox
+	$(PIPENV) tox
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source siemprelisto -m pytest
-	coverage report -m
-	coverage html
+	$(PIPENV) coverage run --source siemprelisto -m pytest
+	$(PIPENV) coverage report -m
+	$(PIPENV) coverage html
 	$(BROWSER) htmlcov/index.html
 
 docs: ## generate Sphinx HTML documentation, including API docs
