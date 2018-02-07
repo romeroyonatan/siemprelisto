@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class PersonaCollection(object):
     def on_get(self, req, resp):
-        # TODO Autenticar y validar
+        # TODO Autenticar
         data = {
             'personas': [
                 dict(persona) for persona in models.Persona.select()
@@ -30,14 +30,8 @@ class PersonaCollection(object):
 
 class PersonaItem(object):
     def on_get(self, req, resp, uuid):
-        # TODO Autenticar y validar
-        persona = (
-            models
-            .Persona
-            .select()
-            .where(models.Persona.uuid == uuid)
-            .get()
-        )
+        # TODO Autenticar
+        persona = models.Persona.select().filter(uuid=uuid).get()
         resp.body = persona.to_json()
         resp.status = falcon.HTTP_OK
 
@@ -56,18 +50,12 @@ class PersonaItem(object):
             raise falcon.HTTPBadRequest('Bad request', str(e))
         else:
             query.execute()
-            persona = (
-                models
-                .Persona
-                .select()
-                .where(models.Persona.uuid == uuid)
-                .get()
-            )
+            persona = models.Persona.select().filter(uuid=uuid).get()
             resp.body = persona.to_json()
             resp.status = falcon.HTTP_OK
 
     def on_delete(self, req, resp, uuid):
-        # TODO Autenticar y validar
+        # TODO Autenticar
         query = models.Persona.delete().where(models.Persona.uuid == uuid)
         deleted = query.execute()
         if deleted == 0:
