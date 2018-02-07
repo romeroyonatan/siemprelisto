@@ -37,7 +37,7 @@ def test_lista(client, db):
     obtenido = json.loads(response.content, encoding='utf-8')
     esperado = {
         'personas': [
-            persona.to_json() for persona in personas
+            persona.to_dict() for persona in personas
         ]
     }
     assert obtenido == esperado
@@ -47,7 +47,7 @@ def test_crear(client, db):
     '''Crea una persona nueva'''
     # genero una persona
     persona = factory.PersonaFactory.build()
-    data = persona.to_json()
+    data = persona.to_dict()
     # llamo a la API
     response = client.simulate_post('/personas', body=json.dumps(data))
     assert response.status == falcon.HTTP_CREATED
@@ -66,7 +66,7 @@ def test_editar(client, db):
     # genero una persona
     persona = factory.PersonaFactory.build()
     persona.save()
-    data = persona.to_json()
+    data = persona.to_dict()
     data['nombre'] = 'Fulano'
     # llamo a la API
     response = client.simulate_put(
@@ -100,3 +100,16 @@ def test_borrar(client, db):
                   .where(models.Persona.id == persona.id)
                   .exists()
     )
+
+
+def test_consultar(client, db):
+    '''Consulta los datos de una persona'''
+    # genero una persona
+    persona = factory.PersonaFactory.build()
+    persona.save()
+    # llamo a la API
+    response = client.simulate_get('/personas/{}'.format(persona.id))
+    assert response.status == falcon.HTTP_OK
+    # verifico los datos
+    obtenido = json.loads(response.content)
+    assert persona.to_dict() == obtenido

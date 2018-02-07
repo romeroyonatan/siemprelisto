@@ -10,7 +10,7 @@ class PersonaCollection(object):
         # TODO Autenticar y validar
         data = {
             'personas': [
-                persona.to_json() for persona in models.Persona.select()
+                persona.to_dict() for persona in models.Persona.select()
             ],
         }
         resp.body = json.dumps(data)
@@ -20,18 +20,24 @@ class PersonaCollection(object):
         data = req.media
         persona = models.Persona(**data)
         persona.save()
-        resp.body = json.dumps(persona.to_json())
+        resp.body = json.dumps(persona.to_dict())
         resp.status = falcon.HTTP_CREATED
 
 
 class PersonaItem(object):
+    def on_get(self, req, resp, pk):
+        # TODO Autenticar y validar
+        persona = models.Persona.select().where(models.Persona.id == pk).get()
+        resp.body = json.dumps(persona.to_dict())
+        resp.status = falcon.HTTP_OK
+
     def on_put(self, req, resp, pk):
         # TODO Autenticar y validar
         data = req.media
         query = models.Persona.update(**data).where(models.Persona.id == pk)
         query.execute()
         persona = models.Persona.select().where(models.Persona.id == pk).get()
-        resp.body = json.dumps(persona.to_json())
+        resp.body = json.dumps(persona.to_dict())
         resp.status = falcon.HTTP_OK
 
     def on_delete(self, req, resp, pk):

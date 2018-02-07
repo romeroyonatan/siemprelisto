@@ -20,6 +20,6 @@ class Persona(peewee.Model):
             self.nombre
         )
 
-    def to_json(self):
+    def to_dict(self):
         # TODO Custom json encoder/decoder
         return shortcuts.model_to_dict(self)
