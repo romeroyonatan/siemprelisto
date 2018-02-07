@@ -83,14 +83,14 @@ def test_editar(client, database):
     data['nombre'] = 'Fulano'
     # llamo a la API
     client.simulate_put(
-        '/personas/{}'.format(persona.id),
+        '/personas/{}'.format(persona.uuid),
         body=json.dumps(data)
     )
     # verifico que se haya modificado en la DB
     assert (
         models.Persona
               .select()
-              .where(models.Persona.id == persona.id,
+              .where(models.Persona.uuid == persona.uuid,
                      models.Persona.nombre == 'Fulano',
                      models.Persona.apellido == persona.apellido)
               .exists()
@@ -106,7 +106,7 @@ def test_respuesta_editar(client, database):
     data['nombre'] = 'Fulano'
     # llamo a la API
     response = client.simulate_put(
-        '/personas/{}'.format(persona.id),
+        '/personas/{}'.format(persona.uuid),
         body=json.dumps(data)
     )
     obtenido = json.loads(response.content)
@@ -121,13 +121,13 @@ def test_borrar(client, database):
     persona = factory.PersonaFactory.build()
     persona.save()
     # llamo a la API
-    response = client.simulate_delete('/personas/{}'.format(persona.id))
+    response = client.simulate_delete('/personas/{}'.format(persona.uuid))
     assert response.status == falcon.HTTP_NO_CONTENT
     # verifico que se haya borrado
     assert (
         not models.Persona
                   .select()
-                  .where(models.Persona.id == persona.id)
+                  .where(models.Persona.uuid == persona.uuid)
                   .exists()
     )
 
@@ -138,7 +138,7 @@ def test_consultar(client, database):
     persona = factory.PersonaFactory.build()
     persona.save()
     # llamo a la API
-    response = client.simulate_get('/personas/{}'.format(persona.id))
+    response = client.simulate_get('/personas/{}'.format(persona.uuid))
     assert response.status == falcon.HTTP_OK
     # verifico los datos
     obtenido = json.loads(response.content)

@@ -12,7 +12,7 @@ api = falcon.API(middleware=[
 
 # Rutas
 api.add_route('/personas', resources.PersonaCollection())
-api.add_route('/personas/{pk}', resources.PersonaItem())
+api.add_route('/personas/{uuid}', resources.PersonaItem())
 
 # Excepciones
 api.add_error_handler(peewee.DoesNotExist, db.not_exists_handler)
