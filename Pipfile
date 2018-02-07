@@ -13,9 +13,11 @@ pytest = "*"
 pytest-runner = "*"
 tox = "*"
 coverage = "*"
+factory-boy = "*"
 
 
 [packages]
 
 falcon = "*"
 gunicorn = "*"
+peewee = "*"
