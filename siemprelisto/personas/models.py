@@ -6,7 +6,7 @@ from siemprelisto.core import db
 
 class Persona(peewee.Model):
     class Meta:
-        database = db
+        database = db.database
 
     apellido = peewee.CharField()
     nombre = peewee.CharField()

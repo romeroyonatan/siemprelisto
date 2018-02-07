@@ -3,9 +3,10 @@ import json
 import falcon
 import falcon.testing
 
-import pytest  # fades
+import pytest
 
-from .. import app, core
+from siemprelisto import app
+from siemprelisto.core import db
 
 from . import factory, models
 
@@ -16,15 +17,15 @@ def client():
 
 
 @pytest.fixture
-def db():
-    core.db.connect()
-    core.db.create_tables([models.Persona])
-    yield core.db
-    core.db.drop_tables([models.Persona])
-    core.db.close()
+def database():
+    db.database.connect()
+    db.database.create_tables([models.Persona])
+    yield db.database
+    db.database.drop_tables([models.Persona])
+    db.database.close()
 
 
-def test_lista(client, db):
+def test_lista(client, database):
     '''Obtiene la lista de personas.'''
     # creo 10 personas
     personas = factory.PersonaFactory.build_batch(10)
@@ -43,14 +44,13 @@ def test_lista(client, db):
     assert obtenido == esperado
 
 
-def test_crear(client, db):
+def test_crear(client, database):
     '''Crea una persona nueva'''
     # genero una persona
     persona = factory.PersonaFactory.build()
     data = persona.to_dict()
     # llamo a la API
-    response = client.simulate_post('/personas', body=json.dumps(data))
-    assert response.status == falcon.HTTP_CREATED
+    client.simulate_post('/personas', body=json.dumps(data))
     # verifico que exista en la DB
     assert (
         models.Persona
@@ -61,7 +61,20 @@ def test_crear(client, db):
     )
 
 
-def test_editar(client, db):
+def test_respuesta_crear(client, database):
+    '''Verifica la respuesta al crear una persona.'''
+    # genero una persona
+    persona = factory.PersonaFactory.build()
+    data = persona.to_dict()
+    # llamo a la API
+    response = client.simulate_post('/personas', body=json.dumps(data))
+    obtenido = json.loads(response.content)
+    assert data['nombre'] == obtenido['nombre']
+    assert data['apellido'] == obtenido['apellido']
+    assert obtenido['id'] is not None
+
+
+def test_editar(client, database):
     '''Edita una persona existente'''
     # genero una persona
     persona = factory.PersonaFactory.build()
@@ -69,11 +82,10 @@ def test_editar(client, db):
     data = persona.to_dict()
     data['nombre'] = 'Fulano'
     # llamo a la API
-    response = client.simulate_put(
+    client.simulate_put(
         '/personas/{}'.format(persona.id),
         body=json.dumps(data)
     )
-    assert response.status == falcon.HTTP_OK
     # verifico que se haya modificado en la DB
     assert (
         models.Persona
@@ -85,7 +97,25 @@ def test_editar(client, db):
     )
 
 
-def test_borrar(client, db):
+def test_respuesta_editar(client, database):
+    '''Verifica la respuesta al editar una persona.'''
+    # genero una persona
+    persona = factory.PersonaFactory.build()
+    persona.save()
+    data = persona.to_dict()
+    data['nombre'] = 'Fulano'
+    # llamo a la API
+    response = client.simulate_put(
+        '/personas/{}'.format(persona.id),
+        body=json.dumps(data)
+    )
+    obtenido = json.loads(response.content)
+    persona.nombre = 'Fulano'
+    assert persona.to_dict() == obtenido
+    assert response.status == falcon.HTTP_OK
+
+
+def test_borrar(client, database):
     '''Borra una persona existente'''
     # genero una persona
     persona = factory.PersonaFactory.build()
@@ -102,7 +132,7 @@ def test_borrar(client, db):
     )
 
 
-def test_consultar(client, db):
+def test_consultar(client, database):
     '''Consulta los datos de una persona'''
     # genero una persona
     persona = factory.PersonaFactory.build()
@@ -113,3 +143,33 @@ def test_consultar(client, db):
     # verifico los datos
     obtenido = json.loads(response.content)
     assert persona.to_dict() == obtenido
+
+
+def test_actualizar__inexistente(client, database):
+    '''Actualizar una persona inexistente'''
+    # llamo a la API
+    response = client.simulate_put('/personas/12345',
+                                   body=json.dumps({'nombre': 'foobar'}))
+    assert response.status == falcon.HTTP_NOT_FOUND
+
+
+def test_actualizar__campos_incorrectos(client, database):
+    '''Actualizar una persona con campos incorrectos'''
+    # llamo a la API
+    response = client.simulate_put('/personas/12345',
+                                   body=json.dumps({'foo': 'bar'}))
+    assert response.status == falcon.HTTP_BAD_REQUEST
+
+
+def test_borrar__inexistente(client, database):
+    '''Borra una persona inexistente'''
+    # llamo a la API
+    response = client.simulate_delete('/personas/12345')
+    assert response.status == falcon.HTTP_NOT_FOUND
+
+
+def test_consultar__inexistente(client, database):
+    '''Consulta los datos de una persona inexistente'''
+    # llamo a la API
+    response = client.simulate_get('/personas/1234')
+    assert response.status == falcon.HTTP_NOT_FOUND

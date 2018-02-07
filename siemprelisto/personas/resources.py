@@ -1,8 +1,11 @@
+import logging
 import json
 
 import falcon
 
 from . import models
+
+logger = logging.getLogger(__name__)
 
 
 class PersonaCollection(object):
@@ -34,14 +37,32 @@ class PersonaItem(object):
     def on_put(self, req, resp, pk):
         # TODO Autenticar y validar
         data = req.media
-        query = models.Persona.update(**data).where(models.Persona.id == pk)
-        query.execute()
-        persona = models.Persona.select().where(models.Persona.id == pk).get()
-        resp.body = json.dumps(persona.to_dict())
-        resp.status = falcon.HTTP_OK
+        try:
+            query = (
+                models
+                .Persona
+                .update(**data)
+                .where(models.Persona.id == pk)
+            )
+        except AttributeError as e:
+            logger.exception(e)
+            raise falcon.HTTPBadRequest('Bad request', str(e))
+        else:
+            query.execute()
+            persona = (
+                models
+                .Persona
+                .select()
+                .where(models.Persona.id == pk)
+                .get()
+            )
+            resp.body = json.dumps(persona.to_dict())
+            resp.status = falcon.HTTP_OK
 
     def on_delete(self, req, resp, pk):
         # TODO Autenticar y validar
         query = models.Persona.delete().where(models.Persona.id == pk)
-        query.execute()
+        deleted = query.execute()
+        if deleted == 0:
+            raise falcon.HTTPNotFound()
         resp.status = falcon.HTTP_NO_CONTENT
