@@ -1,7 +1,10 @@
 import logging
+import json
 
 import falcon
 import peewee
+
+from . import encoders
 
 database = peewee.SqliteDatabase('test.db')
 logger = logging.getLogger(__name__)
@@ -22,3 +25,20 @@ def not_exists_handler(ex, req, resp, params):
     logger.info('Object doest not exists req=%r resp=%r params=%r',
                 req, resp, params)
     raise falcon.HTTPNotFound()
+
+
+class Model(peewee.Model):
+    '''Extiende el modelo de peewee agregando metodos especiales.'''
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        fields = ('{}={!r}'.format(key, value) for key, value in self)
+        return '{}({})'.format(type(self).__name__, ', '.join(fields))
+
+    def __iter__(self):
+        return ((field, getattr(self, field))
+                for field in self._meta.fields.keys())
+
+    def to_json(self):
+        return json.dumps(dict(self), cls=encoders.JSONEncoder)

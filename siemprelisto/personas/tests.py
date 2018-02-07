@@ -38,7 +38,7 @@ def test_lista(client, database):
     obtenido = json.loads(response.content, encoding='utf-8')
     esperado = {
         'personas': [
-            persona.to_dict() for persona in personas
+            dict(persona) for persona in personas
         ]
     }
     assert obtenido == esperado
@@ -48,7 +48,7 @@ def test_crear(client, database):
     '''Crea una persona nueva'''
     # genero una persona
     persona = factory.PersonaFactory.build()
-    data = persona.to_dict()
+    data = dict(persona)
     # llamo a la API
     client.simulate_post('/personas', body=json.dumps(data))
     # verifico que exista en la DB
@@ -65,7 +65,7 @@ def test_respuesta_crear(client, database):
     '''Verifica la respuesta al crear una persona.'''
     # genero una persona
     persona = factory.PersonaFactory.build()
-    data = persona.to_dict()
+    data = dict(persona)
     # llamo a la API
     response = client.simulate_post('/personas', body=json.dumps(data))
     obtenido = json.loads(response.content)
@@ -79,7 +79,7 @@ def test_editar(client, database):
     # genero una persona
     persona = factory.PersonaFactory.build()
     persona.save()
-    data = persona.to_dict()
+    data = dict(persona)
     data['nombre'] = 'Fulano'
     # llamo a la API
     client.simulate_put(
@@ -102,7 +102,7 @@ def test_respuesta_editar(client, database):
     # genero una persona
     persona = factory.PersonaFactory.build()
     persona.save()
-    data = persona.to_dict()
+    data = dict(persona)
     data['nombre'] = 'Fulano'
     # llamo a la API
     response = client.simulate_put(
@@ -111,7 +111,7 @@ def test_respuesta_editar(client, database):
     )
     obtenido = json.loads(response.content)
     persona.nombre = 'Fulano'
-    assert persona.to_dict() == obtenido
+    assert dict(persona) == obtenido
     assert response.status == falcon.HTTP_OK
 
 
@@ -142,7 +142,7 @@ def test_consultar(client, database):
     assert response.status == falcon.HTTP_OK
     # verifico los datos
     obtenido = json.loads(response.content)
-    assert persona.to_dict() == obtenido
+    assert dict(persona) == obtenido
 
 
 def test_actualizar__inexistente(client, database):
@@ -173,3 +173,13 @@ def test_consultar__inexistente(client, database):
     # llamo a la API
     response = client.simulate_get('/personas/1234')
     assert response.status == falcon.HTTP_NOT_FOUND
+
+
+def test_repr(client, database):
+    '''Prueba metodo repr.'''
+    persona = factory.PersonaFactory.build()
+    persona.save()
+    template = "Persona(id={}, uuid='{}', apellido='{}', nombre='{}')"
+    assert repr(persona) == template.format(
+        persona.id, persona.uuid, persona.apellido, persona.nombre
+    )

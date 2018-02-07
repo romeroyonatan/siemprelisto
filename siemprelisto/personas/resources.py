@@ -14,7 +14,7 @@ class PersonaCollection(object):
         # TODO Autenticar y validar
         data = {
             'personas': [
-                persona.to_dict() for persona in models.Persona.select()
+                dict(persona) for persona in models.Persona.select()
             ],
         }
         resp.body = json.dumps(data, cls=encoders.JSONEncoder)
