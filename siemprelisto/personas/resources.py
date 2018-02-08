@@ -4,7 +4,7 @@ import json
 import falcon
 
 from siemprelisto.core import encoders
-from . import models
+from . import models, validators
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,8 @@ class PersonaCollection(object):
         resp.body = json.dumps(data, cls=encoders.JSONEncoder)
 
     def on_post(self, req, resp):
-        # TODO Autenticar y validar
-        data = req.media
+        # TODO Autenticar
+        data = validators.validar_persona(req.media)
         persona = models.Persona(**data)
         persona.save()
         resp.body = persona.to_json()

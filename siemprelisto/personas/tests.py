@@ -48,7 +48,7 @@ def test_crear(client, database):
     '''Crea una persona nueva'''
     # genero una persona
     persona = factory.PersonaFactory.build()
-    data = dict(persona)
+    data = {field: getattr(persona, field) for field in ('nombre', 'apellido')}
     # llamo a la API
     client.simulate_post('/personas', body=json.dumps(data))
     # verifico que exista en la DB
@@ -65,13 +65,13 @@ def test_respuesta_crear(client, database):
     '''Verifica la respuesta al crear una persona.'''
     # genero una persona
     persona = factory.PersonaFactory.build()
-    data = dict(persona)
+    data = {field: getattr(persona, field) for field in ('nombre', 'apellido')}
     # llamo a la API
     response = client.simulate_post('/personas', body=json.dumps(data))
     obtenido = json.loads(response.content)
     assert data['nombre'] == obtenido['nombre']
     assert data['apellido'] == obtenido['apellido']
-    assert obtenido['id'] is not None
+    assert obtenido['uuid'] is not None
 
 
 def test_editar(client, database):
@@ -183,3 +183,10 @@ def test_repr(client, database):
     assert repr(persona) == template.format(
         persona.id, persona.uuid, persona.apellido, persona.nombre
     )
+
+
+def test_crear__datos_requeridos(client, database):
+    '''Prueba validacion campos requeridos'''
+    data = {}
+    response = client.simulate_post('/personas', body=json.dumps(data))
+    assert response.status == falcon.HTTP_BAD_REQUEST

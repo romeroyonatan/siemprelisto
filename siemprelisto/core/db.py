@@ -20,7 +20,7 @@ class PeeweeConnectionMiddleware(object):
             database.close()
 
 
-def not_exists_handler(ex, req, resp, params):
+def handle_does_not_exists(ex, req, resp, params):
     '''Handler for NotExists peewee exception. It raises HTTP_NOT_FOUND.'''
     logger.info('Object doest not exists req=%r resp=%r params=%r',
                 req, resp, params)
@@ -33,12 +33,16 @@ class Model(peewee.Model):
         return repr(self)
 
     def __repr__(self):
-        fields = ('{}={!r}'.format(key, value) for key, value in self)
+        fields = (
+            '{}={!r}'.format(field, getattr(self, field))
+            for field in self._meta.fields.keys()
+        )
         return '{}({})'.format(type(self).__name__, ', '.join(fields))
 
     def __iter__(self):
         return ((field, getattr(self, field))
-                for field in self._meta.fields.keys())
+                for field in self._meta.fields.keys()
+                if field != 'id')
 
     def to_json(self):
         return json.dumps(dict(self), cls=encoders.JSONEncoder)
