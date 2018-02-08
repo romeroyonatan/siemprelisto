@@ -38,21 +38,16 @@ class PersonaItem(object):
     def on_put(self, req, resp, uuid):
         # TODO Autenticar
         data = validators.validar_persona(req.media)
-        try:
-            query = (
-                models
-                .Persona
-                .update(**data)
-                .where(models.Persona.uuid == uuid)
-            )
-        except AttributeError as e:
-            logger.exception(e)
-            raise falcon.HTTPBadRequest('Bad request', str(e))
-        else:
-            query.execute()
-            persona = models.Persona.select().filter(uuid=uuid).get()
-            resp.body = persona.to_json()
-            resp.status = falcon.HTTP_OK
+        query = (
+            models
+            .Persona
+            .update(**data)
+            .where(models.Persona.uuid == uuid)
+        )
+        query.execute()
+        persona = models.Persona.select().filter(uuid=uuid).get()
+        resp.body = persona.to_json()
+        resp.status = falcon.HTTP_OK
 
     def on_delete(self, req, resp, uuid):
         # TODO Autenticar
