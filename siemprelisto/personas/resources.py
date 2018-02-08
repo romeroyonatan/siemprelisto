@@ -36,8 +36,8 @@ class PersonaItem(object):
         resp.status = falcon.HTTP_OK
 
     def on_put(self, req, resp, uuid):
-        # TODO Autenticar y validar
-        data = req.media
+        # TODO Autenticar
+        data = validators.validar_persona(req.media)
         try:
             query = (
                 models

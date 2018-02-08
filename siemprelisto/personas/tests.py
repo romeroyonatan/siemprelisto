@@ -74,45 +74,11 @@ def test_respuesta_crear(client, database):
     assert obtenido['uuid'] is not None
 
 
-def test_editar(client, database):
-    '''Edita una persona existente'''
-    # genero una persona
-    persona = factory.PersonaFactory.build()
-    persona.save()
-    data = dict(persona)
-    data['nombre'] = 'Fulano'
-    # llamo a la API
-    client.simulate_put(
-        '/personas/{}'.format(persona.uuid),
-        body=json.dumps(data)
-    )
-    # verifico que se haya modificado en la DB
-    assert (
-        models.Persona
-              .select()
-              .where(models.Persona.uuid == persona.uuid,
-                     models.Persona.nombre == 'Fulano',
-                     models.Persona.apellido == persona.apellido)
-              .exists()
-    )
-
-
-def test_respuesta_editar(client, database):
-    '''Verifica la respuesta al editar una persona.'''
-    # genero una persona
-    persona = factory.PersonaFactory.build()
-    persona.save()
-    data = dict(persona)
-    data['nombre'] = 'Fulano'
-    # llamo a la API
-    response = client.simulate_put(
-        '/personas/{}'.format(persona.uuid),
-        body=json.dumps(data)
-    )
-    obtenido = json.loads(response.content)
-    persona.nombre = 'Fulano'
-    assert dict(persona) == obtenido
-    assert response.status == falcon.HTTP_OK
+def test_crear__datos_requeridos(client, database):
+    '''Prueba validacion campos requeridos'''
+    data = {}
+    response = client.simulate_post('/personas', body=json.dumps(data))
+    assert response.status == falcon.HTTP_BAD_REQUEST
 
 
 def test_borrar(client, database):
@@ -145,19 +111,73 @@ def test_consultar(client, database):
     assert dict(persona) == obtenido
 
 
-def test_actualizar__inexistente(client, database):
-    '''Actualizar una persona inexistente'''
+def test_editar(client, database):
+    '''Edita una persona existente'''
+    # genero una persona
+    persona = factory.PersonaFactory.build()
+    persona.save()
+    data = {field: getattr(persona, field) for field in ('nombre', 'apellido')}
+    data['nombre'] = 'Fulano'
     # llamo a la API
-    response = client.simulate_put('/personas/12345',
-                                   body=json.dumps({'nombre': 'foobar'}))
+    client.simulate_put(
+        '/personas/{}'.format(persona.uuid),
+        body=json.dumps(data)
+    )
+    # verifico que se haya modificado en la DB
+    assert (
+        models.Persona
+              .select()
+              .where(models.Persona.uuid == persona.uuid,
+                     models.Persona.nombre == 'Fulano',
+                     models.Persona.apellido == persona.apellido)
+              .exists()
+    )
+
+
+def test_respuesta_editar(client, database):
+    '''Verifica la respuesta al editar una persona.'''
+    # genero una persona
+    persona = factory.PersonaFactory.build()
+    persona.save()
+    data = {field: getattr(persona, field) for field in ('nombre', 'apellido')}
+    data['nombre'] = 'Fulano'
+    # llamo a la API
+    response = client.simulate_put(
+        '/personas/{}'.format(persona.uuid),
+        body=json.dumps(data)
+    )
+    obtenido = json.loads(response.content)
+    persona.nombre = 'Fulano'
+    assert dict(persona) == obtenido
+    assert response.status == falcon.HTTP_OK
+
+
+def test_editar__inexistente(client, database):
+    '''Actualizar una persona inexistente'''
+    persona = factory.PersonaFactory.build()
+    persona.save()
+    data = {field: getattr(persona, field) for field in ('nombre', 'apellido')}
+    # llamo a la API
+    response = client.simulate_put('/personas/12345', body=json.dumps(data))
     assert response.status == falcon.HTTP_NOT_FOUND
 
 
-def test_actualizar__campos_incorrectos(client, database):
+def test_editar__campos_incorrectos(client, database):
     '''Actualizar una persona con campos incorrectos'''
     # llamo a la API
     response = client.simulate_put('/personas/12345',
                                    body=json.dumps({'foo': 'bar'}))
+    assert response.status == falcon.HTTP_BAD_REQUEST
+
+
+def test_editar__datos_requeridos(client, database):
+    '''Prueba validacion campos requeridos'''
+    # genero una persona
+    persona = factory.PersonaFactory.build()
+    persona.save()
+    data = {'nombre': 'Fulano'}
+    response = client.simulate_put('/personas/{}'.format(persona.uuid),
+                                   body=json.dumps(data))
     assert response.status == falcon.HTTP_BAD_REQUEST
 
 
@@ -183,10 +203,3 @@ def test_repr(client, database):
     assert repr(persona) == template.format(
         persona.id, persona.uuid, persona.apellido, persona.nombre
     )
-
-
-def test_crear__datos_requeridos(client, database):
-    '''Prueba validacion campos requeridos'''
-    data = {}
-    response = client.simulate_post('/personas', body=json.dumps(data))
-    assert response.status == falcon.HTTP_BAD_REQUEST
