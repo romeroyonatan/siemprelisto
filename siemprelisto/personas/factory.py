@@ -1,4 +1,4 @@
-import factory  # fades factory_boy
+import factory
 
 from . import models
 

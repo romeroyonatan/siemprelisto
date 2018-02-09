@@ -4,7 +4,8 @@ import peewee
 import voluptuous.error
 
 from .core import db, handlers
-from .personas import resources
+
+from siemprelisto import auth, personas
 
 
 api = falcon.API(middleware=[
@@ -12,8 +13,11 @@ api = falcon.API(middleware=[
 ])
 
 # Rutas
-api.add_route('/personas', resources.PersonaCollection())
-api.add_route('/personas/{uuid}', resources.PersonaItem())
+api.add_route('/personas', personas.PersonaCollection())
+api.add_route('/personas/{uuid}', personas.PersonaItem())
+
+api.add_route('/users', auth.UserCollection())
+api.add_route('/users/{id}', auth.UserItem())
 
 # Excepciones
 api.add_error_handler(peewee.DoesNotExist,

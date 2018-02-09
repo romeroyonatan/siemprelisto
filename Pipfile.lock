@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "dd6ac90c7061f5e88694a2472c3cdf487340cd19d1a13fc67846d16a63434cf1"
+            "sha256": "0cda49a2bfd453ad5549077d4cf7949330d507e79e7f96644f6e22e3b0dc9bc4"
         },
         "host-environment-markers": {
             "implementation_name": "cpython",
@@ -43,9 +43,17 @@
         },
         "peewee": {
             "hashes": [
-                "sha256:c8c403b30d29ef9adde0747d1d5f2463b347818d7213b707f3ed6bd4db90d47c"
+                "sha256:f7e334908ccb1b49c80aae1e0f7a40d2def12a18ece274007366abab1be4666f"
             ],
-            "version": "==3.0.14"
+            "version": "==3.0.15"
+        },
+        "peewee-extra-fields": {
+            "hashes": [
+                "sha256:478be60b6b72bc0dfdfb283cb4c729fb5c318b9c937c68cc1b923009ec768ae2",
+                "sha256:49afb1d3f1bd4d0f248389e422aa15b77a3cdf1d89f885ff5dc0b9693a697f06",
+                "sha256:f6af2fec0627b22bbf029741368925d0af55a4bea7ff84530e0ce128334e3e8b"
+            ],
+            "version": "==2.5.0"
         },
         "python-mimeparse": {
             "hashes": [
