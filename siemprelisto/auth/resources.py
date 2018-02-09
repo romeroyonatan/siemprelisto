@@ -2,6 +2,7 @@ import logging
 import json
 
 import falcon
+import jwt
 
 from siemprelisto.core import encoders
 from . import models, validators
@@ -55,3 +56,21 @@ class UserItem(object):
         if deleted == 0:
             raise falcon.HTTPNotFound()
         resp.status = falcon.HTTP_NO_CONTENT
+
+
+class Login(object):
+    def on_post(self, req, resp):
+        data = req.media
+        query = models.User.select().filter(username=data['username'])
+        if query.exists():
+            user = query.get()
+            if user.check_password(data['password']):
+                resp.body = self.generate_jwt(user)
+            else:
+                raise falcon.HTTPForbidden()
+        else:
+            raise falcon.HTTPForbidden()
+
+    def generate_jwt(self, user):
+        '''Generate a JSON Web Token. '''
+        return jwt.encode({'username': user.username}, key='secret')

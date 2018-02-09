@@ -16,8 +16,10 @@ api = falcon.API(middleware=[
 api.add_route('/personas', personas.PersonaCollection())
 api.add_route('/personas/{uuid}', personas.PersonaItem())
 
-api.add_route('/users', auth.UserCollection())
-api.add_route('/users/{id}', auth.UserItem())
+api.add_route('/auth/users', auth.UserCollection())
+api.add_route('/auth/users/{id}', auth.UserItem())
+
+api.add_route('/auth/login', auth.Login())
 
 # Excepciones
 api.add_error_handler(peewee.DoesNotExist,

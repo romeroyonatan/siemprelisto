@@ -2,7 +2,7 @@ import json
 
 import falcon
 import falcon.testing
-
+import jwt
 import pytest
 
 from siemprelisto import app
@@ -32,7 +32,7 @@ def test_lista(client, database):
     for user in users:
         user.save()
     # consulto a la api
-    response = client.simulate_get('/users')
+    response = client.simulate_get('/auth/users')
     assert response.status == falcon.HTTP_OK
     # verifico que devuelva las users correctamente
     obtenido = json.loads(response.content, encoding='utf-8')
@@ -51,7 +51,7 @@ def test_crear(client, database):
         'password': '12345678',
     }
     # llamo a la API
-    client.simulate_post('/users', body=json.dumps(data))
+    client.simulate_post('/auth/users', body=json.dumps(data))
     # verifico que exista en la DB
     assert (
         models.User
@@ -68,7 +68,7 @@ def test_respuesta_crear(client, database):
     user = factory.UserFactory.build()
     data = {field: getattr(user, field) for field in fields}
     # llamo a la API
-    response = client.simulate_post('/users', body=json.dumps(data))
+    response = client.simulate_post('/auth/users', body=json.dumps(data))
     obtenido = json.loads(response.content)
     assert data['nombre'] == obtenido['nombre']
     assert data['apellido'] == obtenido['apellido']
@@ -79,7 +79,7 @@ def test_respuesta_crear(client, database):
 def test_crear__datos_requeridos(client, database):
     '''Prueba validacion campos requeridos'''
     data = {}
-    response = client.simulate_post('/users', body=json.dumps(data))
+    response = client.simulate_post('/auth/users', body=json.dumps(data))
     assert response.status == falcon.HTTP_BAD_REQUEST
 
 
@@ -89,7 +89,7 @@ def test_borrar(client, database):
     user = factory.UserFactory.build()
     user.save()
     # llamo a la API
-    response = client.simulate_delete('/users/{}'.format(user.id))
+    response = client.simulate_delete('/auth/users/{}'.format(user.id))
     assert response.status == falcon.HTTP_NO_CONTENT
     # verifico que se haya borrado
     assert (
@@ -106,7 +106,7 @@ def test_consultar(client, database):
     user = factory.UserFactory.build()
     user.save()
     # llamo a la API
-    response = client.simulate_get('/users/{}'.format(user.id))
+    response = client.simulate_get('/auth/users/{}'.format(user.id))
     assert response.status == falcon.HTTP_OK
     # verifico los datos
     obtenido = json.loads(response.content)
@@ -123,7 +123,7 @@ def test_editar(client, database):
     data['nombre'] = 'Fulano'
     # llamo a la API
     client.simulate_put(
-        '/users/{}'.format(user.id),
+        '/auth/users/{}'.format(user.id),
         body=json.dumps(data)
     )
     # verifico que se haya modificado en la DB
@@ -147,7 +147,7 @@ def test_respuesta_editar(client, database):
     data['nombre'] = 'Fulano'
     # llamo a la API
     response = client.simulate_put(
-        '/users/{}'.format(user.id),
+        '/auth/users/{}'.format(user.id),
         body=json.dumps(data)
     )
     obtenido = json.loads(response.content)
@@ -162,14 +162,14 @@ def test_editar__inexistente(client, database):
     user = factory.UserFactory.build()
     data = {field: getattr(user, field) for field in fields}
     # llamo a la API
-    response = client.simulate_put('/users/12345', body=json.dumps(data))
+    response = client.simulate_put('/auth/users/12345', body=json.dumps(data))
     assert response.status == falcon.HTTP_NOT_FOUND
 
 
 def test_editar__campos_incorrectos(client, database):
     '''Actualizar una user con campos incorrectos'''
     # llamo a la API
-    response = client.simulate_put('/users/12345',
+    response = client.simulate_put('/auth/users/12345',
                                    body=json.dumps({'foo': 'bar'}))
     assert response.status == falcon.HTTP_BAD_REQUEST
 
@@ -180,7 +180,7 @@ def test_editar__datos_requeridos(client, database):
     user = factory.UserFactory.build()
     user.save()
     data = {'nombre': 'Fulano'}
-    response = client.simulate_put('/users/{}'.format(user.id),
+    response = client.simulate_put('/auth/users/{}'.format(user.id),
                                    body=json.dumps(data))
     assert response.status == falcon.HTTP_BAD_REQUEST
 
@@ -188,18 +188,18 @@ def test_editar__datos_requeridos(client, database):
 def test_borrar__inexistente(client, database):
     '''Borra una user inexistente'''
     # llamo a la API
-    response = client.simulate_delete('/users/12345')
+    response = client.simulate_delete('/auth/users/12345')
     assert response.status == falcon.HTTP_NOT_FOUND
 
 
 def test_consultar__inexistente(client, database):
     '''Consulta los datos de una user inexistente'''
     # llamo a la API
-    response = client.simulate_get('/users/1234')
+    response = client.simulate_get('/auth/users/1234')
     assert response.status == falcon.HTTP_NOT_FOUND
 
 
-def test_repr(client, database):
+def test_repr(database):
     '''Prueba metodo repr.'''
     user = factory.UserFactory.build()
     user.save()
@@ -210,6 +210,37 @@ def test_repr(client, database):
     )
 
 
-def check_password(database):
+def test_check_password(database):
     user = factory.UserFactory.build(password='12345678')
     assert user.check_password('12345678')
+
+
+def test_login__ok(client, database):
+    user = factory.UserFactory(username='admin', password='admin123')
+    user.save()
+    data = {'username': 'admin', 'password': 'admin123'}
+    response = client.simulate_post('/auth/login', body=json.dumps(data))
+    assert response.status == falcon.HTTP_OK
+
+
+def test_login_jwt(client, database):
+    '''Verifica que el JSON Web Token sea correcto.'''
+    user = factory.UserFactory(username='admin', password='admin123')
+    user.save()
+    data = {'username': 'admin', 'password': 'admin123'}
+    response = client.simulate_post('/auth/login', body=json.dumps(data))
+    assert jwt.decode(response.content, 'secret')['username'] == 'admin'
+
+
+def test_login__usuario_inexistente(client, database):
+    data = {'username': 'user', 'password': 'user'}
+    response = client.simulate_post('/auth/login', body=json.dumps(data))
+    assert response.status == falcon.HTTP_FORBIDDEN
+
+
+def test_login__password_incorrecta(client, database):
+    user = factory.UserFactory()
+    user.save()
+    data = {'username': user.username, 'password': 'admin123'}
+    response = client.simulate_post('/auth/login', body=json.dumps(data))
+    assert response.status == falcon.HTTP_FORBIDDEN
