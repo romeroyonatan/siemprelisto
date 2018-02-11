@@ -1,5 +1,3 @@
-import json
-
 import falcon
 import falcon.testing
 import jwt
@@ -25,6 +23,17 @@ def database():
     db.database.close()
 
 
+@pytest.fixture
+def token(client, database):
+    # crea usuario
+    user = factory.UserFactory(username='admin', password='admin123')
+    user.save()
+    data = {'username': 'admin', 'password': 'admin123'}
+    # obtiene un token valido
+    response = client.simulate_post('/auth/login', json=data)
+    return response.json['token']
+
+
 def test_lista(client, database):
     '''Obtiene la lista de users.'''
     # creo 10 users
@@ -35,13 +44,12 @@ def test_lista(client, database):
     response = client.simulate_get('/auth/users')
     assert response.status == falcon.HTTP_OK
     # verifico que devuelva las users correctamente
-    obtenido = json.loads(response.content, encoding='utf-8')
     esperado = {
         'users': [
             dict(user) for user in users
         ]
     }
-    assert obtenido == esperado
+    assert response.json == esperado
 
 
 def test_crear(client, database):
@@ -51,7 +59,7 @@ def test_crear(client, database):
         'password': '12345678',
     }
     # llamo a la API
-    client.simulate_post('/auth/users', body=json.dumps(data))
+    client.simulate_post('/auth/users', json=data)
     # verifico que exista en la DB
     assert (
         models.User
@@ -68,8 +76,8 @@ def test_respuesta_crear(client, database):
     user = factory.UserFactory.build()
     data = {field: getattr(user, field) for field in fields}
     # llamo a la API
-    response = client.simulate_post('/auth/users', body=json.dumps(data))
-    obtenido = json.loads(response.content)
+    response = client.simulate_post('/auth/users', json=data)
+    obtenido = response.json
     assert data['nombre'] == obtenido['nombre']
     assert data['apellido'] == obtenido['apellido']
     assert data['username'] == obtenido['username']
@@ -79,7 +87,7 @@ def test_respuesta_crear(client, database):
 def test_crear__datos_requeridos(client, database):
     '''Prueba validacion campos requeridos'''
     data = {}
-    response = client.simulate_post('/auth/users', body=json.dumps(data))
+    response = client.simulate_post('/auth/users', json=data)
     assert response.status == falcon.HTTP_BAD_REQUEST
 
 
@@ -109,8 +117,7 @@ def test_consultar(client, database):
     response = client.simulate_get('/auth/users/{}'.format(user.id))
     assert response.status == falcon.HTTP_OK
     # verifico los datos
-    obtenido = json.loads(response.content)
-    assert dict(user) == obtenido
+    assert dict(user) == response.json
 
 
 def test_editar(client, database):
@@ -124,7 +131,7 @@ def test_editar(client, database):
     # llamo a la API
     client.simulate_put(
         '/auth/users/{}'.format(user.id),
-        body=json.dumps(data)
+        json=data
     )
     # verifico que se haya modificado en la DB
     assert (
@@ -148,11 +155,10 @@ def test_respuesta_editar(client, database):
     # llamo a la API
     response = client.simulate_put(
         '/auth/users/{}'.format(user.id),
-        body=json.dumps(data)
+        json=data
     )
-    obtenido = json.loads(response.content)
     user.nombre = 'Fulano'
-    assert dict(user) == obtenido
+    assert dict(user) == response.json
     assert response.status == falcon.HTTP_OK
 
 
@@ -162,15 +168,14 @@ def test_editar__inexistente(client, database):
     user = factory.UserFactory.build()
     data = {field: getattr(user, field) for field in fields}
     # llamo a la API
-    response = client.simulate_put('/auth/users/12345', body=json.dumps(data))
+    response = client.simulate_put('/auth/users/12345', json=data)
     assert response.status == falcon.HTTP_NOT_FOUND
 
 
 def test_editar__campos_incorrectos(client, database):
     '''Actualizar una user con campos incorrectos'''
     # llamo a la API
-    response = client.simulate_put('/auth/users/12345',
-                                   body=json.dumps({'foo': 'bar'}))
+    response = client.simulate_put('/auth/users/12345', json={'foo': 'bar'})
     assert response.status == falcon.HTTP_BAD_REQUEST
 
 
@@ -181,7 +186,7 @@ def test_editar__datos_requeridos(client, database):
     user.save()
     data = {'nombre': 'Fulano'}
     response = client.simulate_put('/auth/users/{}'.format(user.id),
-                                   body=json.dumps(data))
+                                   json=data)
     assert response.status == falcon.HTTP_BAD_REQUEST
 
 
@@ -219,7 +224,7 @@ def test_login__ok(client, database):
     user = factory.UserFactory(username='admin', password='admin123')
     user.save()
     data = {'username': 'admin', 'password': 'admin123'}
-    response = client.simulate_post('/auth/login', body=json.dumps(data))
+    response = client.simulate_post('/auth/login', json=data)
     assert response.status == falcon.HTTP_OK
 
 
@@ -228,13 +233,14 @@ def test_login_jwt(client, database):
     user = factory.UserFactory(username='admin', password='admin123')
     user.save()
     data = {'username': 'admin', 'password': 'admin123'}
-    response = client.simulate_post('/auth/login', body=json.dumps(data))
-    assert jwt.decode(response.content, 'secret')['username'] == 'admin'
+    response = client.simulate_post('/auth/login', json=data)
+    decoded = jwt.decode(response.json['token'], 'secret')
+    assert decoded['username'] == 'admin'
 
 
 def test_login__usuario_inexistente(client, database):
     data = {'username': 'user', 'password': 'user'}
-    response = client.simulate_post('/auth/login', body=json.dumps(data))
+    response = client.simulate_post('/auth/login', json=data)
     assert response.status == falcon.HTTP_FORBIDDEN
 
 
@@ -242,5 +248,15 @@ def test_login__password_incorrecta(client, database):
     user = factory.UserFactory()
     user.save()
     data = {'username': user.username, 'password': 'admin123'}
-    response = client.simulate_post('/auth/login', body=json.dumps(data))
+    response = client.simulate_post('/auth/login', json=data)
     assert response.status == falcon.HTTP_FORBIDDEN
+
+
+def test_is_valid_jwt_token(client, token):
+    data = {'token': token}
+    # verifica si el token es valido
+    response = client.simulate_post('/auth/is_valid_token',
+                                    json=data)
+    assert response.status == falcon.HTTP_OK
+    user = response.json
+    assert user['username'] == 'admin'

@@ -24,7 +24,7 @@ class UserCollection(object):
         data = validators.validar_user(req.media)
         user = models.User(**data)
         user.save()
-        resp.body = user.to_json()
+        resp.media = dict(user)
         resp.status = falcon.HTTP_CREATED
 
 
@@ -32,7 +32,7 @@ class UserItem(object):
     def on_get(self, req, resp, id):
         # TODO Autenticar
         user = models.User.select().filter(id=id).get()
-        resp.body = user.to_json()
+        resp.media = dict(user)
         resp.status = falcon.HTTP_OK
 
     def on_put(self, req, resp, id):
@@ -46,7 +46,7 @@ class UserItem(object):
         )
         query.execute()
         user = models.User.select().filter(id=id).get()
-        resp.body = user.to_json()
+        resp.media = dict(user)
         resp.status = falcon.HTTP_OK
 
     def on_delete(self, req, resp, id):
@@ -65,7 +65,8 @@ class Login(object):
         if query.exists():
             user = query.get()
             if user.check_password(data['password']):
-                resp.body = self.generate_jwt(user)
+                token = self.generate_jwt(user)
+                resp.media = {'token': token.decode()}
             else:
                 raise falcon.HTTPForbidden()
         else:
@@ -74,3 +75,22 @@ class Login(object):
     def generate_jwt(self, user):
         '''Generate a JSON Web Token. '''
         return jwt.encode({'username': user.username}, key='secret')
+
+
+class IsValidToken(object):
+    def on_post(self, req, resp):
+        token = self.get_token(req)
+        try:
+            data = jwt.decode(token, 'secret')
+            resp.media = data
+        except jwt.InvalidTokenError as e:
+            logger.exception(e)
+            raise falcon.HTTPForbidden()
+
+    def get_token(self, req):
+        data = req.media
+        token = data['token']
+        # TODO validar input
+        if not token:
+            raise falcon.HTTPBadRequest()
+        return token.encode()

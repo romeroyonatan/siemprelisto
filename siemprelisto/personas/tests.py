@@ -1,5 +1,3 @@
-import json
-
 import falcon
 import falcon.testing
 
@@ -35,13 +33,12 @@ def test_lista(client, database):
     response = client.simulate_get('/personas')
     assert response.status == falcon.HTTP_OK
     # verifico que devuelva las personas correctamente
-    obtenido = json.loads(response.content, encoding='utf-8')
     esperado = {
         'personas': [
             dict(persona) for persona in personas
         ]
     }
-    assert obtenido == esperado
+    assert response.json == esperado
 
 
 def test_crear(client, database):
@@ -50,7 +47,7 @@ def test_crear(client, database):
     persona = factory.PersonaFactory.build()
     data = {field: getattr(persona, field) for field in ('nombre', 'apellido')}
     # llamo a la API
-    client.simulate_post('/personas', body=json.dumps(data))
+    client.simulate_post('/personas', json=data)
     # verifico que exista en la DB
     assert (
         models.Persona
@@ -67,8 +64,8 @@ def test_respuesta_crear(client, database):
     persona = factory.PersonaFactory.build()
     data = {field: getattr(persona, field) for field in ('nombre', 'apellido')}
     # llamo a la API
-    response = client.simulate_post('/personas', body=json.dumps(data))
-    obtenido = json.loads(response.content)
+    response = client.simulate_post('/personas', json=data)
+    obtenido = response.json
     assert data['nombre'] == obtenido['nombre']
     assert data['apellido'] == obtenido['apellido']
     assert obtenido['uuid'] is not None
@@ -77,7 +74,7 @@ def test_respuesta_crear(client, database):
 def test_crear__datos_requeridos(client, database):
     '''Prueba validacion campos requeridos'''
     data = {}
-    response = client.simulate_post('/personas', body=json.dumps(data))
+    response = client.simulate_post('/personas', json=data)
     assert response.status == falcon.HTTP_BAD_REQUEST
 
 
@@ -107,8 +104,7 @@ def test_consultar(client, database):
     response = client.simulate_get('/personas/{}'.format(persona.uuid))
     assert response.status == falcon.HTTP_OK
     # verifico los datos
-    obtenido = json.loads(response.content)
-    assert dict(persona) == obtenido
+    assert dict(persona) == response.json
 
 
 def test_editar(client, database):
@@ -121,7 +117,7 @@ def test_editar(client, database):
     # llamo a la API
     client.simulate_put(
         '/personas/{}'.format(persona.uuid),
-        body=json.dumps(data)
+        json=data
     )
     # verifico que se haya modificado en la DB
     assert (
@@ -144,11 +140,10 @@ def test_respuesta_editar(client, database):
     # llamo a la API
     response = client.simulate_put(
         '/personas/{}'.format(persona.uuid),
-        body=json.dumps(data)
+        json=data
     )
-    obtenido = json.loads(response.content)
     persona.nombre = 'Fulano'
-    assert dict(persona) == obtenido
+    assert dict(persona) == response.json
     assert response.status == falcon.HTTP_OK
 
 
@@ -158,15 +153,14 @@ def test_editar__inexistente(client, database):
     persona.save()
     data = {field: getattr(persona, field) for field in ('nombre', 'apellido')}
     # llamo a la API
-    response = client.simulate_put('/personas/12345', body=json.dumps(data))
+    response = client.simulate_put('/personas/12345', json=data)
     assert response.status == falcon.HTTP_NOT_FOUND
 
 
 def test_editar__campos_incorrectos(client, database):
     '''Actualizar una persona con campos incorrectos'''
     # llamo a la API
-    response = client.simulate_put('/personas/12345',
-                                   body=json.dumps({'foo': 'bar'}))
+    response = client.simulate_put('/personas/12345', json={'foo': 'bar'})
     assert response.status == falcon.HTTP_BAD_REQUEST
 
 
@@ -177,7 +171,7 @@ def test_editar__datos_requeridos(client, database):
     persona.save()
     data = {'nombre': 'Fulano'}
     response = client.simulate_put('/personas/{}'.format(persona.uuid),
-                                   body=json.dumps(data))
+                                   json=data)
     assert response.status == falcon.HTTP_BAD_REQUEST
 
 
