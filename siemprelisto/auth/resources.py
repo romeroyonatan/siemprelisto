@@ -1,24 +1,27 @@
+import datetime
 import logging
-import json
+import re
 
 import falcon
 import jwt
 
-from siemprelisto.core import encoders
 from . import models, validators
 
 logger = logging.getLogger(__name__)
+
+JWT_SECRET = 'secret'
+# JSON Web Token Expiration time (in secs)
+JWT_EXPIRATION_TIME = 3600
 
 
 class UserCollection(object):
     def on_get(self, req, resp):
         # TODO Autenticar
-        data = {
+        resp.media = {
             'users': [
                 dict(user) for user in models.User.select()
             ],
         }
-        resp.body = json.dumps(data, cls=encoders.JSONEncoder)
 
     def on_post(self, req, resp):
         data = validators.validar_user(req.media)
@@ -74,23 +77,31 @@ class Login(object):
 
     def generate_jwt(self, user):
         '''Generate a JSON Web Token. '''
-        return jwt.encode({'username': user.username}, key='secret')
+        data = {
+            'username': user.username,
+
+            # add expiration time
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(
+                seconds=JWT_EXPIRATION_TIME
+            ),
+        }
+        return jwt.encode(data, key=JWT_SECRET)
 
 
 class IsValidToken(object):
+    regex = re.compile(r'[\w.]+')
+
     def on_post(self, req, resp):
         token = self.get_token(req)
         try:
-            data = jwt.decode(token, 'secret')
+            data = jwt.decode(token, JWT_SECRET)
             resp.media = data
         except jwt.InvalidTokenError as e:
             logger.exception(e)
             raise falcon.HTTPForbidden()
 
     def get_token(self, req):
-        data = req.media
-        token = data['token']
-        # TODO validar input
-        if not token:
-            raise falcon.HTTPBadRequest()
+        token = req.media.get('token')
+        if not token or not self.regex.match(token):
+            raise falcon.HTTPBadRequest('Invalid token')
         return token.encode()

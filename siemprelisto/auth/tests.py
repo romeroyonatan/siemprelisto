@@ -258,5 +258,16 @@ def test_is_valid_jwt_token(client, token):
     response = client.simulate_post('/auth/is_valid_token',
                                     json=data)
     assert response.status == falcon.HTTP_OK
-    user = response.json
-    assert user['username'] == 'admin'
+    assert response.json['username'] == 'admin'
+
+
+def test_is_valid_jwt_token__empty(client, token):
+    data = {'token': ''}
+    response = client.simulate_post('/auth/is_valid_token', json=data)
+    assert response.status == falcon.HTTP_BAD_REQUEST
+
+
+def test_is_valid_jwt_token__bad_chars(client, token):
+    data = {'token': '@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'}
+    response = client.simulate_post('/auth/is_valid_token', json=data)
+    assert response.status == falcon.HTTP_BAD_REQUEST
