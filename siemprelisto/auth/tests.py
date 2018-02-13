@@ -3,10 +3,12 @@ import falcon.testing
 import jwt
 import pytest
 
+from unittest import mock
+
 from siemprelisto import app
 from siemprelisto.core import db
 
-from . import factory, models, utils
+from . import factory, middleware, models, utils
 
 
 @pytest.fixture
@@ -27,6 +29,7 @@ def database():
 def token(client, database):
     # crea usuario
     user = factory.UserFactory(username='admin', password='admin123')
+    user.save()
     return utils.get_token(user)
 
 
@@ -258,3 +261,35 @@ def test_is_valid_jwt_token__empty():
 
 def test_is_valid_jwt_token__bad_chars(token):
     assert not utils.is_valid_token(token + '@')
+
+
+def test_auth_middleware__not_token():
+    auth = middleware.AuthenticationMiddleware()
+    request = mock.Mock()
+    request.get_header.return_value = None
+    with pytest.raises(falcon.HTTPForbidden):
+        auth.process_resource(request, None, None, {})
+
+
+def test_auth_middleware__not_bearer():
+    auth = middleware.AuthenticationMiddleware()
+    request = mock.Mock()
+    request.get_header.return_value = 'Basic admin:admin'
+    with pytest.raises(falcon.HTTPForbidden):
+        auth.process_resource(request, None, None, {})
+
+
+def test_auth_middleware__invalid_token(token):
+    auth = middleware.AuthenticationMiddleware()
+    request = mock.Mock()
+    request.get_header.return_value = 'Bearer {token}'.format(token=token * 2)
+    with pytest.raises(falcon.HTTPForbidden):
+        auth.process_resource(request, None, None, {})
+
+
+def test_auth_middleware__valid_token(token):
+    auth = middleware.AuthenticationMiddleware()
+    request = mock.Mock()
+    request.get_header.return_value = 'Bearer {token}'.format(token=token)
+    auth.process_resource(request, None, None, {})
+    assert request.user.username is not None

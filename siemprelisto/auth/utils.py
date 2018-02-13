@@ -4,6 +4,9 @@ import re
 import jwt
 
 
+from . import models
+
+
 JWT_SECRET = 'secret'
 # JSON Web Token Expiration time (in secs)
 JWT_EXPIRATION_TIME = 3600
@@ -21,7 +24,7 @@ def is_valid_token(token):
 
 
 def get_token(user):
-    '''Generate a JSON Web Token. '''
+    '''Generate a JSON Web Token for user. '''
     data = {
         'username': user.username,
 
@@ -31,3 +34,12 @@ def get_token(user):
         ),
     }
     return jwt.encode(data, key=JWT_SECRET).decode()
+
+
+def get_user(token):
+    '''Get user from token.
+
+    Raise jwt.InvalidTokenError when token is invalid
+    '''
+    data = jwt.decode(token, JWT_SECRET)
+    return models.User.select().filter(username=data['username']).get()
