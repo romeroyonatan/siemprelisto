@@ -6,7 +6,7 @@ import pytest
 from siemprelisto import app
 from siemprelisto.core import db
 
-from . import factory, models
+from . import factory, models, utils
 
 
 @pytest.fixture
@@ -27,11 +27,7 @@ def database():
 def token(client, database):
     # crea usuario
     user = factory.UserFactory(username='admin', password='admin123')
-    user.save()
-    data = {'username': 'admin', 'password': 'admin123'}
-    # obtiene un token valido
-    response = client.simulate_post('/auth/login', json=data)
-    return response.json['token']
+    return utils.get_token(user)
 
 
 def test_lista(client, database):
@@ -252,22 +248,13 @@ def test_login__password_incorrecta(client, database):
     assert response.status == falcon.HTTP_FORBIDDEN
 
 
-def test_is_valid_jwt_token(client, token):
-    data = {'token': token}
-    # verifica si el token es valido
-    response = client.simulate_post('/auth/is_valid_token',
-                                    json=data)
-    assert response.status == falcon.HTTP_OK
-    assert response.json['username'] == 'admin'
+def test_is_valid_jwt_token(token):
+    assert utils.is_valid_token(token)
 
 
-def test_is_valid_jwt_token__empty(client, token):
-    data = {'token': ''}
-    response = client.simulate_post('/auth/is_valid_token', json=data)
-    assert response.status == falcon.HTTP_BAD_REQUEST
+def test_is_valid_jwt_token__empty():
+    assert not utils.is_valid_token('')
 
 
-def test_is_valid_jwt_token__bad_chars(client, token):
-    data = {'token': '@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'}
-    response = client.simulate_post('/auth/is_valid_token', json=data)
-    assert response.status == falcon.HTTP_BAD_REQUEST
+def test_is_valid_jwt_token__bad_chars(token):
+    assert not utils.is_valid_token(token + '@')
