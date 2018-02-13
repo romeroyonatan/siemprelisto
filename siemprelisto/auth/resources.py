@@ -51,6 +51,8 @@ class UserItem(object):
 
 
 class Login(object):
+    auth = {'post': False}  # dont require Authorization
+
     def on_post(self, req, resp):
         data = req.media
         query = models.User.select().filter(username=data['username'])

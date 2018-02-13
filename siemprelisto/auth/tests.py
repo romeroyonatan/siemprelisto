@@ -290,3 +290,13 @@ def test_auth_middleware__valid_token(token):
     request.auth = 'Bearer {token}'.format(token=token)
     auth.process_resource(request, None, None, {})
     assert request.user.username is not None
+
+
+def test_auth_middleware__dont_check_auth():
+    auth = middleware.AuthenticationMiddleware()
+    request = mock.Mock()
+    resource = mock.Mock()
+    # dont validate in post method
+    request.method = 'POST'
+    resource.auth = {'post': False}
+    auth.process_resource(request, None, resource, {})
