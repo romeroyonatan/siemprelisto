@@ -264,7 +264,7 @@ def test_auth_middleware__not_token():
     auth = middleware.AuthenticationMiddleware()
     request = mock.Mock()
     request.auth = None
-    with pytest.raises(falcon.HTTPForbidden):
+    with pytest.raises(falcon.HTTPUnauthorized):
         auth.process_resource(request, None, None, {})
 
 

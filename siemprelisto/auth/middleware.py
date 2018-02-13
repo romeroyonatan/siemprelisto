@@ -33,15 +33,15 @@ class AuthenticationMiddleware(object):
             authorization_header = req.auth
             # check if authorizacion header exists
             if not authorization_header:
-                raise falcon.HTTPForbidden()
+                raise falcon.HTTPUnauthorized('Login required')
 
             # check if authorization is Bearer
             if not authorization_header.startswith('Bearer '):
-                raise falcon.HTTPForbidden()
+                raise falcon.HTTPForbidden('Invalid Authorization header')
 
             # check if is valid token
             token = authorization_header.split()[-1]
             if utils.is_valid_token(token):
                 req.user = utils.get_user(token)
             else:
-                raise falcon.HTTPForbidden()
+                raise falcon.HTTPForbidden('Invalid token')
