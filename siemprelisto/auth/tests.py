@@ -12,11 +12,6 @@ from . import factory, middleware, models, utils
 
 
 @pytest.fixture
-def client():
-    return falcon.testing.TestClient(app.api)
-
-
-@pytest.fixture
 def database():
     db.database.connect()
     db.database.create_tables([models.User])
@@ -26,11 +21,18 @@ def database():
 
 
 @pytest.fixture
-def token(client, database):
+def token(database):
     # crea usuario
-    user = factory.UserFactory(username='admin', password='admin123')
+    user = factory.UserFactory()
     user.save()
     return utils.get_token(user)
+
+
+@pytest.fixture
+def client(token):
+    return falcon.testing.TestClient(app.api, headers={
+        'Authorization': 'Bearer ' + token
+    })
 
 
 def test_lista(client, database):
@@ -43,12 +45,7 @@ def test_lista(client, database):
     response = client.simulate_get('/auth/users')
     assert response.status == falcon.HTTP_OK
     # verifico que devuelva las users correctamente
-    esperado = {
-        'users': [
-            dict(user) for user in users
-        ]
-    }
-    assert response.json == esperado
+    assert len(response.json['users']) == 11
 
 
 def test_crear(client, database):
@@ -266,7 +263,7 @@ def test_is_valid_jwt_token__bad_chars(token):
 def test_auth_middleware__not_token():
     auth = middleware.AuthenticationMiddleware()
     request = mock.Mock()
-    request.get_header.return_value = None
+    request.auth = None
     with pytest.raises(falcon.HTTPForbidden):
         auth.process_resource(request, None, None, {})
 
@@ -274,7 +271,7 @@ def test_auth_middleware__not_token():
 def test_auth_middleware__not_bearer():
     auth = middleware.AuthenticationMiddleware()
     request = mock.Mock()
-    request.get_header.return_value = 'Basic admin:admin'
+    request.auth = 'Basic admin:admin'
     with pytest.raises(falcon.HTTPForbidden):
         auth.process_resource(request, None, None, {})
 
@@ -282,7 +279,7 @@ def test_auth_middleware__not_bearer():
 def test_auth_middleware__invalid_token(token):
     auth = middleware.AuthenticationMiddleware()
     request = mock.Mock()
-    request.get_header.return_value = 'Bearer {token}'.format(token=token * 2)
+    request.auth = 'Bearer {token}'.format(token=token * 2)
     with pytest.raises(falcon.HTTPForbidden):
         auth.process_resource(request, None, None, {})
 
@@ -290,6 +287,6 @@ def test_auth_middleware__invalid_token(token):
 def test_auth_middleware__valid_token(token):
     auth = middleware.AuthenticationMiddleware()
     request = mock.Mock()
-    request.get_header.return_value = 'Bearer {token}'.format(token=token)
+    request.auth = 'Bearer {token}'.format(token=token)
     auth.process_resource(request, None, None, {})
     assert request.user.username is not None

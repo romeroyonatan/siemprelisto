@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 class UserCollection(object):
     def on_get(self, req, resp):
-        # TODO Autenticar
         resp.media = {
             'users': [
                 dict(user) for user in models.User.select()
@@ -26,13 +25,11 @@ class UserCollection(object):
 
 class UserItem(object):
     def on_get(self, req, resp, id):
-        # TODO Autenticar
         user = models.User.select().filter(id=id).get()
         resp.media = dict(user)
         resp.status = falcon.HTTP_OK
 
     def on_put(self, req, resp, id):
-        # TODO Autenticar
         data = validators.validar_user(req.media)
         query = (
             models
@@ -46,7 +43,6 @@ class UserItem(object):
         resp.status = falcon.HTTP_OK
 
     def on_delete(self, req, resp, id):
-        # TODO Autenticar
         query = models.User.delete().where(models.User.id == id)
         deleted = query.execute()
         if deleted == 0:

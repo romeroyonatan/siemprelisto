@@ -10,6 +10,7 @@ from siemprelisto import auth, personas
 
 api = falcon.API(middleware=[
     db.PeeweeConnectionMiddleware(),
+    auth.AuthenticationMiddleware(),
 ])
 
 # Rutas

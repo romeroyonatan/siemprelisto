@@ -17,7 +17,7 @@ class AuthenticationMiddleware(object):
         attribute to False
         '''
         if getattr(resource, 'auth_required', True):
-            authorization_header = req.get_header('Authorization')
+            authorization_header = req.auth
             # check if authorizacion header exists
             if not authorization_header:
                 raise falcon.HTTPForbidden()

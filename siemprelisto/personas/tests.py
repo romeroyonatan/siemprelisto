@@ -5,22 +5,33 @@ import pytest
 
 from siemprelisto import app
 from siemprelisto.core import db
+from siemprelisto import auth
 
 from . import factory, models
 
 
 @pytest.fixture
-def client():
-    return falcon.testing.TestClient(app.api)
+def database():
+    db.database.connect()
+    db.database.create_tables([models.Persona, auth.models.User])
+    yield db.database
+    db.database.drop_tables([models.Persona, auth.models.User])
+    db.database.close()
 
 
 @pytest.fixture
-def database():
-    db.database.connect()
-    db.database.create_tables([models.Persona])
-    yield db.database
-    db.database.drop_tables([models.Persona])
-    db.database.close()
+def token(database):
+    # crea usuario
+    user = auth.factory.UserFactory(username='admin', password='admin123')
+    user.save()
+    return auth.utils.get_token(user)
+
+
+@pytest.fixture
+def client(token):
+    return falcon.testing.TestClient(app.api, headers={
+        'Authorization': 'Bearer ' + token
+    })
 
 
 def test_lista(client, database):
