@@ -29,7 +29,7 @@ class AuthenticationMiddleware(object):
         ```
         '''
         auth_map = getattr(resource, 'auth', {})
-        if auth_map.get(req.method, True):
+        if auth_map.get(req.method.lower(), True):
             authorization_header = req.auth
             # check if authorizacion header exists
             if not authorization_header:
